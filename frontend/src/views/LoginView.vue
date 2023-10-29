@@ -62,6 +62,8 @@ const validate = useVuelidate(rule, user)
 const store = useStore()
 
 const login = async (e) => {
+    store.state.loading = true
+
     e.preventDefault();
     const pass = await validate.value.$validate()
     if (!pass)
@@ -74,8 +76,10 @@ const login = async (e) => {
             router.push("/")
         })
         .catch((err) => {
+            console.log(err)
             store.commit("addError", err.response.data.error)
         })
+    store.state.loading = false
 }
 
 </script>

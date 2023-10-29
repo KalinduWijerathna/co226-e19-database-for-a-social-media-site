@@ -117,6 +117,7 @@ const submitData = computed(() => {
 })
 
 const submit = () => {
+    store.state.loading = true
     axios
         .post("/signup/more", submitData.value)
         .then((res) => {
@@ -126,6 +127,7 @@ const submit = () => {
         .catch((err) => {
             store.commit("addError", err.response.data.error)
         })
+    store.state.loading = false
 }
 
 </script >

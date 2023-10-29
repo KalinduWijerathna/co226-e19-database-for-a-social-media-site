@@ -73,7 +73,7 @@ const setLike = async (index) => {
             like.value = likes[index]
             viewMenu.value = false
             await removeLike()
-            await sendLike(like.value.id)
+            await sendLike(like.value.id || 0)
         }
         else if (index == null) {
             like.value = likes[index]

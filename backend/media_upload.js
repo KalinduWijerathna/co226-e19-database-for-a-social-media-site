@@ -1,33 +1,41 @@
 const express = require("express");
 const multer = require("multer");
 const slugify = require("slugify");
+const {
+  getStorage,
+  ref,
+  uploadBytes,
+  getDownloadURL,
+} = require("firebase/storage");
+const firebaseApp = require("./firebase");
+const storage = getStorage(firebaseApp);
+
 const router = express.Router();
 
-const route = (server) => {
-  // Set up storage for multer
-  const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-      cb(null, "public/media/");
-    },
-    filename: function (req, file, cb) {
-      const originalName = file.originalname;
-      const sanitizedName = slugify(originalName, { remove: /[*+~()'"!:@]/g });
-      const uniqueFileName = `${Date.now()}-${sanitizedName}`;
-      cb(null, uniqueFileName);
-    },
-  });
-
+const route = () => {
   const upload = multer({
-    storage,
+    storage: multer.memoryStorage(),
     limits: { fileSize: 104857600 },
   });
 
-  // POST route to upload a new profile picture
-  router.post("/upload", upload.single("media"), (req, res) => {
+  router.post("/upload", upload.single("media"), async (req, res) => {
     if (req.file) {
-      const mediaPath =
-        server + req.file.path.replace(/\\/g, "/").replace("public/", "");
-      res.status(200).json({ mediaURL: mediaPath });
+      const mediaBuffer = req.file.buffer;
+      const originalName = req.file.originalname;
+      const sanitizedName = slugify(originalName, { remove: /[*+~()'"!:@]/g });
+      const uniqueFileName = `${Date.now()}-${sanitizedName}`;
+      const mediaPath = `media/${uniqueFileName}`;
+
+      try {
+        const storageRef = ref(storage, mediaPath);
+        await uploadBytes(storageRef, mediaBuffer);
+        const mediaURL = await getDownloadURL(storageRef);
+
+        res.status(200).json({ mediaURL });
+      } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Error uploading media" });
+      }
     } else {
       res.status(400).json({ error: "No file uploaded" });
     }

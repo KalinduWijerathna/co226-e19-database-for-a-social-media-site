@@ -1,6 +1,6 @@
 <template>
     <div class="container">
-        <div class="requests" v-if="requests.length">
+        <div class="requests" v-if="requests && requests.length">
             <h3>Friend Requests</h3>
             <div class="request" v-for="(request, index) in requests" :key="index">
                 <router-link class="profpic" :to="`/profile/${request.user_name}`">
@@ -12,8 +12,10 @@
                     </router-link>
                     has sent a friend request
                 </p>
-                <button class="btn accept" @click="acceptRequest(request.requester_id)">Accept</button>
-                <button class="btn reject" @click="rejectRequest(request.requester_id)">Delete</button>
+                <div class="btn-deck">
+                    <button class="btn accept" @click="acceptRequest(request.requester_id)">Accept</button>
+                    <button class="btn reject" @click="rejectRequest(request.requester_id)">Delete</button>
+                </div>
             </div>
         </div>
         <h3>Find your friends on <span>Peralink</span></h3>
@@ -42,6 +44,7 @@
 import axios from "axios";
 import { onMounted, ref, watch } from "vue";
 import { useStore } from "vuex";
+import io from "socket.io-client"
 
 const search = ref("")
 const loading = ref(false)
@@ -56,30 +59,37 @@ watch(search, async () => {
 })
 
 const getUsers = async (query) => {
+    store.state.loading = true
     try {
         const response = await axios.get("/search_global/", {
             params: {
                 q: query,
             }
         })
+        store.state.loading = false
         return response.data
     }
     catch (err) {
         store.commit("addError", err.response.data.error)
     }
+    store.state.loading = false
 }
 
 const getRequest = async () => {
+    store.state.loading = true
     try {
         const res = await axios.get("/friend_request/")
+        store.state.loading = false
         return res.data
     }
     catch (err) {
         store.commit("addError", err.response.data.error)
     }
+    store.state.loading = false
 }
 
 const sendRequest = async (id) => {
+    store.state.loading = true
     try {
         await axios.post("/friend_request/send", {
             friend_id: id
@@ -90,9 +100,11 @@ const sendRequest = async (id) => {
     catch (err) {
         store.commit("addError", err.response.data.error)
     }
+    store.state.loading = false
 }
 
 const cancelRequest = async (id) => {
+    store.state.loading = true
     try {
         await axios.delete("/friend_request/cancel", {
             data: { friend_id: id }
@@ -103,9 +115,11 @@ const cancelRequest = async (id) => {
     catch (err) {
         store.commit("addError", err.response.data.error)
     }
+    store.state.loading = false
 }
 
 const acceptRequest = async (id, name) => {
+    store.state.loading = true
     try {
         await axios.post("/friend_request/accept", {
             friend_id: id
@@ -117,9 +131,11 @@ const acceptRequest = async (id, name) => {
     catch (err) {
         store.commit("addError", err.response.data.error)
     }
+    store.state.loading = false
 }
 
 const rejectRequest = async (id) => {
+    store.state.loading = true
     try {
         await axios.delete("/friend_request/reject", {
             data: { friend_id: id }
@@ -129,9 +145,11 @@ const rejectRequest = async (id) => {
     catch (err) {
         store.commit("addError", err.response.data.error)
     }
+    store.state.loading = false
 }
 
 const unfriend = async (id, name) => {
+    store.state.loading = true
     try {
         await axios.delete("/friend_request/unfriend", {
             data: { friend_id: id }
@@ -142,11 +160,48 @@ const unfriend = async (id, name) => {
     catch (err) {
         store.commit("addError", err.response.data.error)
     }
+    store.state.loading = false
 }
 
 onMounted(async () => {
     users.value = await getUsers("%")
     requests.value = await getRequest()
+
+    const socket = io('https://peralink-backend.onrender.com/friendreq'); // Change the URL to match your server and namespace
+
+    // Listen for new post event
+    socket.on('sendRequest', async (requesteeId) => {
+        console.log("got", requesteeId, store.state.user.u_id)
+        if (requesteeId == store.state.user.u_id) {
+            requests.value = await getRequest()
+        }
+
+    });
+
+    // Listen for deleted post event
+    socket.on('cancelRequest', async (requesteeId) => {
+        if (requesteeId == store.state.user.u_id) {
+            requests.value = await getRequest()
+        }
+    });
+
+    socket.on('rejectRequest', async (requesterId, requesteeId) => {
+        if (requesterId == store.state.user.u_id) {
+            users.value = await getUsers(search.value.length > 0 ? search.value : "%")
+        }
+    });
+
+    socket.on('acceptRequest', async (requesterId, requesteeId) => {
+        if (requesterId == store.state.user.u_id) {
+            users.value = await getUsers(search.value.length > 0 ? search.value : "%")
+        }
+    });
+
+    socket.on('unfriend', async (friendId, userId) => {
+        if (friendId == store.state.user.u_id) {
+            users.value = await getUsers(search.value.length > 0 ? search.value : "%")
+        }
+    });
 })
 </script>
 
@@ -281,13 +336,28 @@ h3 span {
     background: #2FA634;
 }
 
-@media screen and (max-width:769px) {
+.btn-deck {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+@media screen and (max-width:500px) {
     .deck .card {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        box-shadow: 0 0 10px #ccc;
+        padding: 1rem 2rem;
+    }
+
+    .deck .card a {
         display: grid;
-        grid-template-rows: 1rem 1fr 1fr 1rem;
-        grid-template-columns: 1fr 2fr 2fr;
-        min-height: 80px;
-        padding: 0 1rem;
+        grid-template-columns: auto 1fr;
+        grid-column: 1;
+        grid-row: 2/4;
+        gap: 0 1rem;
+        text-align: left;
     }
 
     .deck .card img {
@@ -310,6 +380,14 @@ h3 span {
         grid-column: 3;
         grid-row: 2/4;
         font-size: 0.8rem;
+        margin-left: auto;
+    }
+
+    .requests .request {
+        display: flex;
+        flex-direction: column;
+        margin: 1rem auto;
+        text-align: center;
     }
 }
 </style>

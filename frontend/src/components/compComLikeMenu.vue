@@ -21,8 +21,7 @@ import { useStore } from "vuex";
 
 
 const store = useStore()
-const props = defineProps(['commentID'])
-const emits = defineEmits(['change'])
+const props = defineProps(['commentID', "like", "post"])
 
 const viewMenu = ref(false)
 const like = ref(null)
@@ -85,7 +84,6 @@ const setLike = async (index) => {
             like.value = likes[index]
             await removeLike()
         }
-        emits("change")
     }
 }
 
@@ -94,21 +92,8 @@ const sendLike = async (like_id) => {
         await axios.post("/comment_like/add", {
             comment_id: props.commentID,
             liketype_id: like_id,
+            post: props.post
         })
-    }
-    catch (err) {
-        store.commit("addError", err.response.data.error)
-    }
-}
-
-const getLike = async (id) => {
-    try {
-        const res = await axios.get("/comment_like/", {
-            params: {
-                comment_id: id,
-            }
-        })
-        return res.data.like - 1
     }
     catch (err) {
         store.commit("addError", err.response.data.error)
@@ -120,6 +105,7 @@ const removeLike = async () => {
         await axios.delete("/comment_like/delete", {
             data: {
                 comment_id: props.commentID,
+                post: props.post
             }
         })
     }
@@ -128,10 +114,10 @@ const removeLike = async () => {
     }
 }
 
-onMounted(async () => {
-    await setTimeout(() => { }, 100)
-    const index = await getLike(props.commentID)
-    like.value = likes[index]
+onMounted(() => {
+    setTimeout(() => {
+        like.value = likes[props.like - 1]
+    }, 200)
 })
 </script>
 
@@ -140,6 +126,7 @@ onMounted(async () => {
     position: relative;
     height: 22px;
     margin-right: 1rem;
+    margin-left: auto;
 }
 
 .like-menu .main-img {
@@ -160,9 +147,11 @@ onMounted(async () => {
     gap: 1rem;
     top: -4rem;
     left: 0;
+    transform: translateX(-50%);
     background: white;
     border-radius: 10px;
     box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+    z-index: 3;
 }
 
 .like-menu .menu-deck button {

@@ -5,6 +5,7 @@ const router = express.Router();
 const db = require("./index"); // Assuming the database connection is in index.js
 const auth = require("./authMiddleware");
 const timePresent = require("./timePresent");
+const socketService = require("./socketService"); // define web socket
 
 router.get("/", auth, (req, res) => {
   const requestee = req.user.u_id;
@@ -88,6 +89,10 @@ router.post("/send", auth, (req, res) => {
             console.log(err);
             return res.status(500).json({ error: "Database error" });
           }
+          const friendReqSocket = socketService.getSocketNamespace("friendreq");
+          if (friendReqSocket) {
+            friendReqSocket.emit("sendRequest", requesteeId);
+          }
           res.status(200).json({ message: "Friend request sent successfully" });
         }
       );
@@ -119,6 +124,12 @@ router.post("/accept", auth, (req, res) => {
             console.log(err);
             return res.status(500).json({ error: "Database error" });
           }
+
+          const friendReqSocket = socketService.getSocketNamespace("friendreq");
+          if (friendReqSocket) {
+            friendReqSocket.emit("acceptRequest", requesterId);
+          }
+
           res.status(200).json({
             message: "Friend request accepted and added to friends_with",
           });
@@ -140,6 +151,10 @@ router.delete("/cancel", auth, (req, res) => {
       if (err) {
         return res.status(500).json({ error: "Database error" });
       }
+      const friendReqSocket = socketService.getSocketNamespace("friendreq");
+      if (friendReqSocket) {
+        friendReqSocket.emit("cancelRequest", requesteeId);
+      }
       res.status(200).json({ message: "Friend request canceled successfully" });
     }
   );
@@ -158,6 +173,10 @@ router.delete("/reject", auth, (req, res) => {
         console.log(err);
         return res.status(500).json({ error: "Database error" });
       }
+      const friendReqSocket = socketService.getSocketNamespace("friendreq");
+      if (friendReqSocket) {
+        friendReqSocket.emit("rejectRequest", requesterId, requesteeId);
+      }
       res.status(200).json({ message: "Friend request deleted successfully" });
     }
   );
@@ -174,6 +193,10 @@ router.delete("/unfriend", auth, (req, res) => {
     (err, results) => {
       if (err) {
         return res.status(500).json({ error: "Database error" });
+      }
+      const friendReqSocket = socketService.getSocketNamespace("friendreq");
+      if (friendReqSocket) {
+        friendReqSocket.emit("unfriend", friendId, userId);
       }
       res.status(200).json({ message: "Friendship deleted successfully" });
     }

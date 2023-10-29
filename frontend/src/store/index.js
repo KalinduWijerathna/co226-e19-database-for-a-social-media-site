@@ -11,6 +11,7 @@ export default createStore({
     currentSignupUser: "",
     showComment: false,
     currComPost: 0,
+    loading: false,
   },
   getters: {},
   mutations: {
@@ -30,23 +31,32 @@ export default createStore({
       state.token = payload.token;
       state.isAuthenticated = true;
       state.user = payload.user;
-      axios.defaults.headers.common["Authorization"] = payload.token;
+      axios.defaults.headers.common["authorization"] = payload.token;
     },
     setLogout(state) {
       state.token = "";
       state.user = "";
       state.isAuthenticated = false;
-      axios.defaults.headers.common["Authorization"] = "";
+      axios.defaults.headers.common["authorization"] = "";
     },
     showComments(state) {
-      console.log("store");
       state.showComment = !state.showComment;
     },
   },
-  actions: {},
+  actions: {
+    async loadState({ commit }) {
+      const stateJson = localStorage.getItem("myAppState");
+      if (stateJson) {
+        const state = JSON.parse(stateJson);
+        commit("setLogin", {
+          token: state.token,
+          user: state.user,
+          tokenExpiration: state.tokenExpiration,
+        });
+      }
+    },
+  },
   modules: {},
-  // Load initial state from localStorage
-  state: loadStateFromLocalStorage(),
   // Subscribe to mutations to save state to localStorage
   plugins: [
     (store) => {
@@ -60,27 +70,4 @@ export default createStore({
 // Save state to localStorage
 function saveStateToLocalStorage(state) {
   localStorage.setItem("myAppState", JSON.stringify(state));
-}
-
-// Retrieve state from localStorage
-function loadStateFromLocalStorage() {
-  const stateJson = localStorage.getItem("myAppState");
-  if (stateJson) {
-    const state = JSON.parse(stateJson);
-    if (state.token != "") {
-      axios.defaults.headers.common["Authorization"] = state.token;
-    }
-    state.errList = [];
-    state.sucList = [];
-    return state;
-  } else {
-    return {
-      sucList: [],
-      errList: [],
-      isAuthenticated: false,
-      token: "",
-      user: Object,
-      currentSignupUser: "",
-    };
-  }
 }

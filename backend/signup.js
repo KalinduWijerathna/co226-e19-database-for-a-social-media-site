@@ -101,17 +101,18 @@ const route = (db) => {
   });
 
   router.post("/final", (req, res) => {
-    const { u_id, bio, affiliation, interests } = req.body;
+    const { u_id, bio, affiliation, interests, profile_picture } = req.body;
     // Update user's bio
     const updateUserBioQuery = `UPDATE user
                                 SET bio = ?,
-                                affiliation = ?
+                                affiliation = ?,
+                                profile_picture = ?
                                 WHERE u_id = ?;`;
 
     // Update user's bio in the user table
     db.query(
       updateUserBioQuery,
-      [bio, affiliation, u_id],
+      [bio, affiliation, profile_picture, u_id],
       (bioError, bioResult) => {
         if (bioError) {
           console.error("Error updating user bio:", bioError);

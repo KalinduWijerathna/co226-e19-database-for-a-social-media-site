@@ -18,6 +18,7 @@ const route = (db) => {
       affiliation,
       bio,
       interests, // Use the interests array instead of the interest field
+      profile_picture,
     } = req.body;
 
     // profilePic as link
@@ -34,7 +35,8 @@ const route = (db) => {
         b_date = ?,
         location = ?,
         affiliation = ?,
-        bio = ?
+        bio = ?,
+        profile_picture = ?
     `;
 
     if (password !== (null || undefined)) {
@@ -73,6 +75,7 @@ const route = (db) => {
               affiliation,
               bio,
               password,
+              profile_picture,
               u_id,
             ]
           : [
@@ -86,6 +89,7 @@ const route = (db) => {
               location,
               affiliation,
               bio,
+              profile_picture,
               u_id,
             ],
         (error, result) => {

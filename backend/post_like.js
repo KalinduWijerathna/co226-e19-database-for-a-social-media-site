@@ -3,6 +3,7 @@
 const express = require("express");
 const router = express.Router();
 const auth = require("./authMiddleware");
+const socketService = require("./socketService");
 
 // Define a route for like handling related to posts with database connection
 const route = (db) => {
@@ -62,6 +63,12 @@ const route = (db) => {
       if (err) {
         return res.status(500).json({ error: "Database error" });
       }
+
+      const postLikeSocket = socketService.getSocketNamespace("postLike");
+      if (postLikeSocket) {
+        postLikeSocket.emit("newPostLike", postId);
+      }
+
       res.status(200).json({ message: "Like added to post successfully" });
     });
   });
@@ -77,6 +84,10 @@ const route = (db) => {
       (err, results) => {
         if (err) {
           return res.status(500).json({ error: "Database error" });
+        }
+        const postLikeSocket = socketService.getSocketNamespace("postLike");
+        if (postLikeSocket) {
+          postLikeSocket.emit("deletePostLike", postId);
         }
         res
           .status(200)

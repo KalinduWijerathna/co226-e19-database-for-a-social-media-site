@@ -2,12 +2,13 @@ const express = require("express");
 const router = express.Router();
 const auth = require("./authMiddleware");
 const timePresent = require("./timePresent");
+const socketService = require("./socketService");
 
 // Define a route for like and comment handling related to posts with database connection
 const route = (db) => {
   // Middleware to check if the post exists
   const postExists = (req, res, next) => {
-    const postId = req.body.p_id || req.query.p_id;
+    const postId = req.body.p_id || req.query.p_id || req.params.postid;
     db.query(
       "SELECT p_id FROM post WHERE p_id = ?",
       [postId],
@@ -25,9 +26,9 @@ const route = (db) => {
     );
   };
 
-  router.get("/get/:postid", (req, res) => {
+  router.get("/get/:postid", auth, postExists, (req, res) => {
     const postId = req.params.postid; // Get the post ID from the route parameter
-    console.log(postId);
+    const u_id = req.user.u_id;
 
     db.query(
       `
@@ -38,7 +39,8 @@ const route = (db) => {
         u.last_name,
         u.profile_picture,
         IFNULL(cl.likeCount, 0) AS likeCount,
-        IFNULL(lt.liketype_ids, '') AS liketype_ids
+        IFNULL(lt.liketype_ids, '') AS liketype_ids,
+        ul.liketype_id AS liketype_id 
       FROM comment AS c
       LEFT JOIN user AS u ON u.u_id = c.user_id
       LEFT JOIN (
@@ -55,9 +57,14 @@ const route = (db) => {
         ) AS temp
         GROUP BY comment_id
       ) AS lt ON lt.comment_id = c.c_id
+      LEFT JOIN (
+        SELECT comment_id, liketype_id
+        FROM comment_like
+        WHERE user_id = ? 
+      ) AS ul ON ul.comment_id = c.c_id 
       WHERE c.post_id = ?;
     `,
-      [postId],
+      [u_id, postId],
       (err, results) => {
         if (err) {
           console.log(err);
@@ -65,7 +72,7 @@ const route = (db) => {
         }
         if (results.length === 0) {
           console.log(err);
-          return res.status(404).json({ error: "Comment not found" });
+          // return res.status(404).json({ error: "Comments not found" });
         }
 
         const comment = results.map((com) => ({
@@ -82,6 +89,8 @@ const route = (db) => {
           fname: com.first_name,
           lname: com.last_name,
           propic: com.profile_picture,
+          post: com.post_id,
+          like: com.liketype_id,
           likeCount: com.likeCount,
           liketypes: com.liketype_ids.split(",").slice(0, 3), // Take the first 3 liketype_ids
           // any other required properties
@@ -113,13 +122,19 @@ const route = (db) => {
         console.log(err);
         return res.status(500).json({ error: "Database error" });
       }
+      const commentSocket = socketService.getSocketNamespace("comment");
+      if (commentSocket) {
+        commentSocket.emit("newComment", postId);
+      }
+
       res.status(200).json({ message: "Comment added to post successfully" });
     });
   });
 
   // DELETE route to remove a comment from a post
-  router.delete("/delete/:commentid", auth, postExists, (req, res) => {
-    const commentId = req.params.commentid; // Get the comment ID from the route parameter
+  router.delete("/delete", auth, postExists, (req, res) => {
+    const commentId = req.body.commentid; // Get the comment ID from the route parameter
+    const postId = req.body.p_id;
 
     db.query(
       "DELETE FROM comment WHERE c_id = ?",
@@ -128,6 +143,10 @@ const route = (db) => {
         if (err) {
           console.log(err);
           return res.status(500).json({ error: "Database error" });
+        }
+        const commentSocket = socketService.getSocketNamespace("comment");
+        if (commentSocket) {
+          commentSocket.emit("deleteComment", postId);
         }
         res
           .status(200)

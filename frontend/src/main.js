@@ -5,9 +5,10 @@ import router from "./router";
 import store from "./store";
 import axios from "axios";
 
-axios.defaults.baseURL = "http://localhost:3010";
+axios.defaults.baseURL = "https://peralink-backend.onrender.com";
 
-axios.defaults.headers.common["Content-Type"] = "application/json";
+axios.defaults.headers.common["content-type"] = "application/json";
+axios.defaults.headers.common["Authorization"] = "";
 
 axios.interceptors.response.use(
   (response) => {
@@ -20,8 +21,8 @@ axios.interceptors.response.use(
       error.response.status === 401 &&
       router.currentRoute.value.path !== "/login"
     ) {
+      console.log(store.state);
       store.commit("setLogout");
-      axios.defaults.headers = "";
       store.commit("addError", "Session has expired");
       router.push("/login");
       console.log("Access denied");
@@ -31,4 +32,6 @@ axios.interceptors.response.use(
   }
 );
 
-createApp(App).use(store).use(router).mount("#app");
+store.dispatch("loadState").then(() => {
+  createApp(App).use(store).use(router).mount("#app");
+});

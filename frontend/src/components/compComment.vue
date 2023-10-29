@@ -1,5 +1,5 @@
 <template>
-    <div class="comment">
+    <div class="comment" v-if="comment.content">
         <div class="prof-pic">
             <img :src="comment.propic" alt="" />
         </div>
@@ -18,7 +18,7 @@
                     </div>
                     <span>{{ comment.likeCount }}</span>
                 </div>
-                <comp-com-like-menu :commentID="props.comment.id" @change="loadComment(props.comment.id)" />
+                <comp-com-like-menu :commentID="props.comment.id" :like="props.comment.like" :post="props.comment.post" />
                 <p>{{ comment.date }}</p>
             </div>
             <button class="del" v-if="comment.uname == store.state.user.user_name" @click="deleteComment">
@@ -71,6 +71,18 @@ const likes = ref([
         emoji: '😡',
     },
 ])
+
+const deleteComment = () => {
+    axios.delete(`/comment/delete`, {
+        data: {
+            commentid: props.comment.id,
+            p_id: store.state.currComPost
+        }
+    }).then(() => {
+    }).catch((err) => {
+        store.commit("addError", err.response.data.error)
+    })
+}
 
 onMounted(async () => {
     comment.value = props.comment

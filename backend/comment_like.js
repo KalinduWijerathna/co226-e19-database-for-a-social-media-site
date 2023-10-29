@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const auth = require("./authMiddleware");
+const socketService = require("./socketService");
 
 const route = (db) => {
   const commentExists = (req, res, next) => {
@@ -41,6 +42,7 @@ const route = (db) => {
     const userId = req.user.u_id;
     const commentId = req.body.comment_id;
     const likeTypeId = req.body.liketype_id;
+    const post = req.body.post;
 
     const like = {
       l_time: new Date().toISOString().slice(11, 19),
@@ -56,6 +58,11 @@ const route = (db) => {
       if (err) {
         return res.status(500).json({ error: "Database error" });
       }
+      const commentSocket = socketService.getSocketNamespace("comment");
+      if (commentSocket) {
+        commentSocket.emit("newComment", post);
+      }
+
       res.status(200).json({ message: "Like added to comment successfully" });
     });
   });
@@ -63,6 +70,7 @@ const route = (db) => {
   router.delete("/delete", auth, commentExists, (req, res) => {
     const userId = req.user.u_id;
     const commentId = req.body.comment_id;
+    const post = req.body.post;
 
     db.query(
       "DELETE FROM comment_like WHERE user_id = ? AND comment_id = ?",

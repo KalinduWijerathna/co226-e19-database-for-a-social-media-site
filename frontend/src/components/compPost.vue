@@ -1,7 +1,7 @@
 <template>
     <div class="post-container">
         <transition name="fade" role="div" mode="in-out">
-            <img src="@/assets/post_placeholder.png" class="placeholder" v-if="!post.media" alt="">
+            <img src="@/assets/post_placeholder.png" class="placeholder" v-if="!post.id" alt="">
             <div class="post" v-else>
                 <div class="post-header">
                     <router-link :to="`/profile/${post.uname}`" class="profile">
@@ -19,9 +19,9 @@
                     </button>
                 </div>
                 <div class="post-text">
-                    <pre>{{ post.content }}</pre>
+                    <p>{{ post.content }}</p>
                 </div>
-                <div class="image-content">
+                <div class="image-content" v-if="post.media != ''">
                     <img v-if="post.m_type == 0" :src="post.media" alt="">
                     <video v-if="post.m_type == 1" :src="post.media" controls></video>
                     <comp-post-share v-if="post.m_type == 2" :post="post.media" />
@@ -34,7 +34,7 @@
                 <button class="post-footer" @click="viewComment">
                     <div class="likes" v-if="post.likeCount">
                         <div class="like-deck">
-                            <p v-for="(type, index) in post.likeTypes.slice(0, 3)" :key="index">
+                            <p v-for="( type, index ) in  post.likeTypes.slice(0, 3) " :key="index">
                                 {{ likes[type - 1] ? likes[type - 1].emoji : '' }}
                             </p>
                         </div>
@@ -56,6 +56,7 @@ import { useStore } from 'vuex';
 import compLikeMenu from './compLikeMenu.vue';
 import compPostShare from './compPostShare.vue';
 import { useRouter } from 'vue-router';
+import io from "socket.io-client"
 
 const props = defineProps(['post'])
 const post = ref({})
@@ -133,18 +134,54 @@ const sharePost = () => {
 
 onMounted(async () => {
     await getPost()
+
+    const socket = io('https://peralink-backend.onrender.com/post-like'); // Change the URL to match your server and namespace
+
+    // Listen for new post event
+    socket.on('newPostLike', (PostId) => {
+        if (post.value.id == PostId) {
+            getPost()
+        }
+    });
+
+    // Listen for deleted post event
+    socket.on('deletePostLike', (PostId) => {
+        if (post.value.id == PostId) {
+            getPost()
+        }
+    });
+
+
+    const socketCom = io('https://peralink-backend.onrender.com/comment'); // Change the URL to match your server and namespace
+
+    // Listen for new post event
+    socketCom.on('newComment', (PostId) => {
+        if (post.value.id == PostId) {
+            getPost()
+        }
+    });
+
+    // Listen for deleted post event
+    socketCom.on('deleteComment', (PostId) => {
+        if (post.value.id == PostId) {
+            getPost()
+        }
+    });
 })
 </script>
 
 <style scoped>
 .post-container {
     position: relative;
+    width: 100%;
+    min-height: 400px;
 }
 
 .placeholder {
     width: 100%;
     min-width: 450px;
     max-width: 550px;
+    position: absolute;
 }
 
 .post {
@@ -216,6 +253,12 @@ onMounted(async () => {
 .post .post-text {
     padding: 1rem 1.5rem;
     font-weight: 300;
+    width: 100%;
+}
+
+.post .post-text p {
+    width: 100%;
+    white-space: pre-line;
 }
 
 .post .image-content {
@@ -317,5 +360,16 @@ onMounted(async () => {
     .post .post-footer img {
         height: 0.8rem;
     }
+}
+
+
+.fade-enter-active,
+.fade-leave-active {
+    transition: opacity 0.5s;
+}
+
+.fade-leave-to,
+.fade-enter-from {
+    opacity: 0;
 }
 </style>

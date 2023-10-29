@@ -3,13 +3,13 @@
         <div class="container">
             <div class="flex-box">
                 <div class="post-deck">
-                    <comp-post v-for="post in posts" :key="post.id" :post="post" />
-                    <p style="color:#555" v-if="posts && posts.length == 0">nothing to show here</p>
+                    <comp-post v-for="post in filteredPosts" :key="post.id" :post="post" />
+                    <p style="color:#555" v-if="posts && filteredPosts.length == 0">nothing to show here</p>
                 </div>
                 <div class="comm-deck">
                     <div class="friends">
                         <h2>Friends</h2>
-                        <div class="friend-deck">
+                        <div class="friend-deck" v-if="friends">
                             <router-link :to="`profile/${friend.user_name}`" class="profile" v-for="friend in friends"
                                 :key="friend.user_name">
                                 <img :src="friend.profile_picture" alt="">
@@ -34,38 +34,81 @@
 import axios from 'axios';
 import compPost from '@/components/compPost.vue';
 import compComment from '@/components/compComment.vue';
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useStore } from 'vuex';
+import io from "socket.io-client"
 
 const store = useStore()
 
 const posts = ref([])
+const viewCondArray = ref([])
+const filteredPosts = computed(() => {
+    return posts.value.filter((post, index) => viewCondArray.value[index]);
+})
 const friends = ref([])
 const user = store.state.user
 
-const getPosts = async () => {
-    try {
-        const result = await axios.get(`/post_feed/`);
-        return result.data
-    }
-    catch (err) {
-        console.log(err)
-    }
-}
+const getPosts = () => {
+    return new Promise(async (resolve, reject) => {
+        store.state.loading = true;
+        try {
+            const result = await axios.get(`/post_feed/`);
+            store.state.loading = false;
+            resolve(result.data); // Resolve the promise with the fetched data
+        } catch (err) {
+            console.log(err);
+            store.state.loading = false;
+            reject(err); // Reject the promise with the error
+        }
+    });
+};
 
 const getFriends = async () => {
+    store.state.loading = true
     try {
         const result = await axios.get(`/search_friend/all`);
+        store.state.loading = false
         return result.data
     }
     catch (err) {
         console.log(err)
     }
+    store.state.loading = false
 }
 
 onMounted(async () => {
-    posts.value = await getPosts()
-    friends.value = await getFriends()
+    try {
+        posts.value = await getPosts()
+        friends.value = await getFriends()
+    }
+    catch (err) {
+        console.log(err)
+    }
+
+
+    viewCondArray.value = Array.from({ length: posts.value.length }, () => false)
+    viewCondArray.value[0] = true
+    viewCondArray.value[1] = true
+
+    window.addEventListener("scroll", () => {
+        const scrollFactor = parseInt(window.scrollY / window.innerHeight)
+        const index = scrollFactor * 2
+        viewCondArray.value[index] = true
+        viewCondArray.value[index + 1] = true
+    });
+
+    const socket = io('https://peralink-backend.onrender.com/post'); // Change the URL to match your server and namespace
+
+    // Listen for new post event
+    socket.on('newPost', (newPost) => {
+        posts.value.unshift(newPost);
+    });
+
+    // Listen for deleted post event
+    socket.on('deletedPost', (deletedPostId) => {
+        posts.value = posts.value.filter(post => post.id !== deletedPostId);
+    });
+
 })
 
 </script>

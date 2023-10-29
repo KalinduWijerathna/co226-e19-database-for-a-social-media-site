@@ -17,9 +17,14 @@ const route = (db) => {
             WHEN f.requester_id = u.u_id AND f.accepter_id = ? THEN 1  -- You are the accepter
             ELSE 0
         END AS is_friend,
+        CASE
+            WHEN fr.requestee_id = u.u_id AND fr.requester_id = ? AND fr.req_status = 'pending' THEN 1  -- You sent a friend request
+            ELSE 0
+        END AS sent_request,
         GROUP_CONCAT(ui.interest) AS interests
     FROM user AS u
     LEFT JOIN friends_with AS f ON (f.requester_id = ? AND f.accepter_id = u.u_id) OR (f.requester_id = u.u_id AND f.accepter_id = ?)
+    LEFT JOIN friend_request AS fr ON fr.requestee_id = u.u_id AND fr.requester_id = ?
     LEFT JOIN user_interests AS ui ON ui.user_id = u.u_id
     WHERE u.user_name = ?
     GROUP BY u.u_id;
@@ -27,7 +32,7 @@ const route = (db) => {
 
     db.query(
       getUserQuery,
-      [u_id, u_id, u_id, u_id, user_name],
+      [u_id, u_id, u_id, u_id, u_id, u_id, user_name],
       (error, results) => {
         if (error) {
           // Handle error
@@ -55,7 +60,8 @@ const route = (db) => {
               affiliation: user.affiliation,
               bio: user.bio,
               is_friend: user.is_friend,
-              interests: user.interests
+              sent_request: user.sent_request,
+              interests: user.interests,
             };
             res.json(userData);
           }

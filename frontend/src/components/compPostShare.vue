@@ -15,7 +15,7 @@
                     </div>
                 </div>
                 <div class="post-text">
-                    <pre>{{ post.content }}</pre>
+                    <p>{{ post.content }}</p>
                 </div>
                 <div class="image-content">
                     <img v-if="!post.m_type" :src="post.media" alt="">
@@ -53,6 +53,7 @@ onMounted(() => {
 .post-container {
     position: relative;
     padding: 10px;
+    min-height: auto !important;
 }
 
 .placeholder {
@@ -122,6 +123,11 @@ onMounted(() => {
 .post .post-text {
     padding: 1rem 1.5rem;
     font-weight: 300;
+}
+
+.post .post-text p {
+    width: 100%;
+    white-space: pre-line;
 }
 
 .post .image-content>img {

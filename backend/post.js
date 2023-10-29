@@ -4,6 +4,7 @@ const express = require("express");
 const router = express.Router();
 const auth = require("./authMiddleware");
 const timePresent = require("./timePresent");
+const socketService = require("./socketService");
 
 // Define a route for post handling with database connection
 const route = (db) => {
@@ -97,6 +98,16 @@ const route = (db) => {
       if (err) {
         return res.status(500).json({ error: "Database error" });
       }
+
+      const postSocket = socketService.getSocketNamespace("post");
+      if (postSocket) {
+        const newPostWithId = {
+          id: results.insertId,
+        };
+
+        postSocket.emit("newPost", newPostWithId); // Emit the new post with ID to clients
+      }
+
       res.status(200).json({ message: "Post added successfully" });
     });
   });
@@ -128,6 +139,12 @@ const route = (db) => {
             if (err) {
               return res.status(500).json({ error: "Database error" });
             }
+
+            const postSocket = socketService.getSocketNamespace("post"); // Get the /post namespace
+            if (postSocket) {
+              postSocket.emit("deletedPost", postId); // Emit the deleted post ID to clients in the /post namespace
+            }
+
             res.status(200).json({ message: "Post deleted successfully" });
           }
         );

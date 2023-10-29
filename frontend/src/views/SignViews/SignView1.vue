@@ -63,6 +63,7 @@ const rules = computed(() => {
 const validate = useVuelidate(rules, user)
 
 const submit = async (e) => {
+    store.state.loading = true
     e.preventDefault()
     const pass = await validate.value.$validate()
     if (!pass)
@@ -85,6 +86,7 @@ const submit = async (e) => {
         .catch((err) => {
             store.commit("addError", err.message)
         })
+    store.state.loading = false
 }
 </script>
 
