@@ -33,7 +33,10 @@ const route = (db, secretKey) => {
             } else {
               if (passwordMatch) {
                 // Passwords match, create JWT token
-                const payload = { user_id: user.id, user_name: user.user_name };
+                const payload = {
+                  u_id: user.u_id,
+                  user_name: user.user_name,
+                };
                 const options = { expiresIn: "1h" };
                 const token = jwt.sign(payload, secretKey, options);
                 res.json({ token, user });

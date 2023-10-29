@@ -54,4 +54,3 @@ This project is licensed under the [MIT License](LICENSE).
 - [MySQL](https://www.mysql.com/) - The relational database management system used for data storage.
 - [GitHub](https://github.com/) - The platform for version control and collaboration.
 
-Feel free to customize and add more information to this README.md file to suit your specific project requirements.

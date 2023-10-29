@@ -1,7 +1,7 @@
 <template>
     <div class="sign">
         <img class="left" src="@/assets/social.jpg" alt="">
-        <form action="">
+        <form action="" @submit.prevent="submit">
             <h3>CREATE A NEW ACCOUNT</h3>
             <div class="form-input">
                 <label for="">Username</label>
@@ -23,7 +23,7 @@
                 <input type="password" placeholder="same as previous one" v-model="user.rpassword">
                 <p v-if="validate.rpassword.$error">{{ validate.rpassword.$errors[0].$message }}</p>
             </div>
-            <button type="submit" @click="submit">Create Account</button>
+            <button type="submit">Create Account</button>
             <div class="or">
                 <p>OR</p>
             </div>
@@ -75,14 +75,15 @@ const submit = async (e) => {
         confirmPassword: user.rpassword,
     }
 
-    axios
-        .post("/signup", formData)
+    await axios
+        .post("/signup/", formData)
         .then((res) => {
-            console.log(res)
+            console.log(res.data.message)
+            store.state.currentSignupUser = res.data.u_id
             router.push("/sign-up/more-about-you")
         })
         .catch((err) => {
-            console.log(err)
+            store.commit("addError", err.message)
         })
 }
 </script>

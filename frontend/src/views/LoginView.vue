@@ -45,7 +45,9 @@ import { useVuelidate } from '@vuelidate/core'
 import { required } from '@vuelidate/validators'
 import { useStore } from 'vuex'
 import axios from 'axios'
+import { useRouter } from 'vue-router';
 
+const router = useRouter()
 const checkValue = ref()
 const user = reactive({
     user_name: '',
@@ -65,13 +67,14 @@ const login = async (e) => {
     if (!pass)
         return
 
-    axios
+    await axios
         .post("/login", user)
-        .then((res) => {
-            store.commit('setLogin', { token: res.data.token, user: res.data.user })
+        .then(async (res) => {
+            await store.commit('setLogin', { token: res.data.token, user: res.data.user })
+            router.push("/")
         })
         .catch((err) => {
-            console.log(err)
+            store.commit("addError", err.response.data.error)
         })
 }
 

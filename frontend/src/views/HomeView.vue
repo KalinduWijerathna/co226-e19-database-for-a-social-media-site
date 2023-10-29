@@ -8,7 +8,7 @@
         </div>
         <div class="links">
           <router-link to="/"><img src="@/assets/Home_light.png" alt=""></router-link>
-          <router-link to="/friends"><img src="@/assets/Group_light.png" alt=""></router-link>
+          <router-link to="/find-friends"><img src="@/assets/Group_light.png" alt=""></router-link>
         </div>
         <comp-pop-menu />
       </div>
@@ -89,5 +89,6 @@ import compPopMenu from "@/components/compPopMenu.vue";
   .nav-bar .logo h3 {
     display: none;
   }
+
 }
 </style>

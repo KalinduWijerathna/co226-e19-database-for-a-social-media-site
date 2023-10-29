@@ -1,11 +1,12 @@
 <template>
     <div class="like-menu">
-        <button @click="setLike(1)" @touchstart="showMenu" @mouseover="showMenu" class="main-img">
-            Like
+        <button @click="setLike(like != null ? null : 0)" @touchstart="showMenu" @mouseover="showMenu"
+            :class="`main-img ${like ? 'like' : ''}`" :style="`color:${like ? like.color : '#333'}`">
+            {{ like ? like.name : 'Like' }}
         </button>
         <transition name="menu">
             <div class="menu-deck" v-if="viewMenu" @mouseleave="hideMenu">
-                <button @click=" setLike(index)" v-for="(like, index) in likes" :key="index" @touchend="setLike(index)">
+                <button @click="setLike(index)" v-for="(like, index) in likes" :key="index" @touchend="setLike(index)">
                     {{ like.emoji }}
                 </button>
             </div>
@@ -14,31 +15,55 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
+import axios from "axios";
+import { useStore } from "vuex";
+
+
+const store = useStore()
+const props = defineProps(['commentID'])
+const emits = defineEmits(['change'])
 
 const viewMenu = ref(false)
 const like = ref(null)
 const likes = [
     {
+        id: 1,
+        name: 'like',
         emoji: '👍',
+        color: '#00d',
     },
     {
+        id: 2,
+        name: 'love',
         emoji: '❤️',
+        color: '#e30a0a'
     },
     {
+        id: 3,
+        name: 'ha ha',
         emoji: '😄',
+        color: '#F7B125'
     },
     {
+        id: 4,
+        name: 'wow',
         emoji: '😲',
+        color: '#F7B125'
     },
     {
+        id: 5,
+        name: 'sad',
         emoji: '😢',
+        color: '#F7B125'
     },
     {
+        id: 6,
+        name: 'angry',
         emoji: '😡',
+        color: '#E97516'
     },
 ]
-
 
 const showMenu = () => {
     viewMenu.value = true
@@ -48,10 +73,66 @@ const hideMenu = () => {
     viewMenu.value = false
 }
 
-const setLike = (index) => {
-    like.value = likes[index]
-    viewMenu.value = false
+const setLike = async (index) => {
+    if (like.value !== likes[index]) {
+        if (index !== null) {
+            like.value = likes[index]
+            viewMenu.value = false
+            await removeLike()
+            await sendLike(like.value.id)
+        }
+        else if (index == null) {
+            like.value = likes[index]
+            await removeLike()
+        }
+        emits("change")
+    }
 }
+
+const sendLike = async (like_id) => {
+    try {
+        await axios.post("/comment_like/add", {
+            comment_id: props.commentID,
+            liketype_id: like_id,
+        })
+    }
+    catch (err) {
+        store.commit("addError", err.response.data.error)
+    }
+}
+
+const getLike = async (id) => {
+    try {
+        const res = await axios.get("/comment_like/", {
+            params: {
+                comment_id: id,
+            }
+        })
+        return res.data.like - 1
+    }
+    catch (err) {
+        store.commit("addError", err.response.data.error)
+    }
+}
+
+const removeLike = async () => {
+    try {
+        await axios.delete("/comment_like/delete", {
+            data: {
+                comment_id: props.commentID,
+            }
+        })
+    }
+    catch (err) {
+        store.commit("addError", err.response.data.error)
+    }
+}
+
+onMounted(async () => {
+    await setTimeout(() => { }, 100)
+    const index = await getLike(props.commentID)
+    like.value = likes[index]
+})
 </script>
 
 <style scoped>
@@ -64,6 +145,11 @@ const setLike = (index) => {
 .like-menu .main-img {
     background: none;
     border: none;
+    color: #333;
+}
+
+.like-menu .main-img.like {
+    font-weight: 600;
 }
 
 .like-menu .menu-deck {
